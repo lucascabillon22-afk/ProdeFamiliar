@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prode Familiar</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Instrument Sans', sans-serif; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        .header { width: 100%; max-width: 600px; text-align: center; margin-bottom: 20px; }
+        
+        .caja-login { background-color: #1e293b; border: 1px solid #3b82f6; padding: 25px; border-radius: 12px; width: 100%; max-width: 400px; box-sizing: border-box; text-align: left; margin: 0 auto; }
+        .caja-login label { display: block; margin-bottom: 8px; color: #94a3b8; font-size: 0.95rem; font-weight: 600; }
+        .caja-login select, .caja-login input { width: 100%; padding: 12px; background-color: #0f172a; color: white; border: 1px solid #475569; border-radius: 8px; font-size: 1.1rem; font-family: 'Instrument Sans', sans-serif; box-sizing: border-box; margin-bottom: 20px; text-align: center; }
+        .btn-ingresar { background-color: #3b82f6; color: white; border: none; padding: 15px; border-radius: 8px; font-size: 1.1rem; font-weight: bold; cursor: pointer; width: 100%; transition: 0.2s; }
+        .btn-ingresar:hover { background-color: #2563eb; }
+
+        .main-tabs { display: flex; width: 100%; max-width: 600px; gap: 10px; margin-bottom: 25px; }
+        .btn-tab { flex: 1; background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 15px; border-radius: 12px; font-family: 'Instrument Sans', sans-serif; font-weight: 700; font-size: 1rem; cursor: pointer; transition: 0.2s; }
+        .btn-tab.activo { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+
+        #panel-app { display: none; width: 100%; max-width: 600px; flex-direction: column; align-items: center; }
+        #seccion-prode, #seccion-ranking { width: 100%; }
+
+        .fases-nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: 100%; margin-bottom: 20px; }
+        .btn-fase { background-color: #1e293b; color: #94a3b8; border: 1px solid #334155; padding: 8px 16px; border-radius: 20px; font-family: 'Instrument Sans', sans-serif; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
+        .btn-fase.activo { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+
+        .partido-card { background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 15px 20px; margin-bottom: 15px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
+        .info-partido { color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; text-align: center; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        
+        /* NUEVO: Estilos para Banderas y Nombres Completos */
+        .fila-partido { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px; }
+        .equipo-container { display: flex; align-items: center; gap: 10px; flex: 1; }
+        .equipo-container.local { justify-content: flex-end; text-align: right; }
+        .equipo-container.visitante { justify-content: flex-start; text-align: left; }
+        
+        .nombres { display: flex; flex-direction: column; }
+        .abrev { font-weight: 700; font-size: 1.25rem; color: #f8fafc; }
+        .nombre-completo { font-size: 0.75rem; color: #94a3b8; font-weight: 600; margin-top: 2px; }
+        .bandera { width: 32px; height: auto; border-radius: 4px; box-shadow: 0 2px 5px rgba(0,0,0,0.4); }
+
+        .centro-inputs { display: flex; align-items: center; gap: 10px; justify-content: center; }
+        input[type="number"] { width: 45px; height: 45px; background-color: #0f172a; border: 1px solid #475569; color: white; font-size: 1.2rem; text-align: center; border-radius: 8px; font-weight: bold; }
+        input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
+        input[type="number"].completado { border-color: #10b981; color: #10b981; }
+        .vs { color: #64748b; font-size: 0.9rem; font-weight: bold; }
+        
+        .btn-guardar { background-color: #10b981; color: white; border: none; padding: 15px 30px; border-radius: 8px; font-size: 1.1rem; font-weight: 600; cursor: pointer; margin-top: 10px; margin-bottom: 40px; width: 100%; }
+        
+        .table-responsive { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; background-color: #1e293b; border-radius: 12px; border: 1px solid #334155; }
+        .tabla-ranking { width: 100%; border-collapse: collapse; white-space: nowrap; }
+        .tabla-ranking th, .tabla-ranking td { padding: 12px 15px; text-align: center; border-bottom: 1px solid #334155; }
+        .tabla-ranking th { background-color: #0f172a; color: #94a3b8; font-weight: 600; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px; }
+        .tabla-ranking tr:last-child td { border-bottom: none; }
+        .puntos-destacados { color: #3b82f6; font-size: 1.2rem; font-weight: bold; }
+        .dato-secundario { color: #94a3b8; font-size: 0.9rem; }
+        
+        #cargando { color: #3b82f6; font-size: 1.1rem; font-weight: bold; margin-bottom: 20px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h2>🏆 Prode Familiar 2026</h2>
+        <div id="cargando">Conectando con la base de datos... ⚽</div>
+    </div>
+
+    <div id="panel-login" class="caja-login" style="display: none;">
+        <label for="jugador">¿Quién sos?</label>
+        <select id="jugador">
+            <option value="">Seleccioná tu nombre...</option>
+        </select>
+        
+        <label for="pin">PIN de seguridad (4 dígitos)</label>
+        <input type="password" id="pin" placeholder="****" pattern="[0-9]*" inputmode="numeric" maxlength="4">
+        
+        <button class="btn-ingresar" id="btn-ingreso" onclick="intentarIngreso()">Ingresar</button>
+    </div>
+
+    <div id="panel-app">
+        
+        <div class="main-tabs">
+            <button id="tab-prode" class="btn-tab activo" onclick="cambiarSeccion('prode')">⚽ Mis Pronósticos</button>
+            <button id="tab-ranking" class="btn-tab" onclick="cambiarSeccion('ranking')">📊 Ranking</button>
+        </div>
+
+        <div style="width: 100%; text-align: left; margin-bottom: 15px; color: #94a3b8; font-size: 0.9rem;">
+            Sesión iniciada como: <strong id="nombre-activo" style="color: white;"></strong>
+        </div>
+
+        <div id="seccion-prode">
+            <div id="navegacion-fases" class="fases-nav"></div>
+            <div id="contenedor-partidos" style="width: 100%;"></div>
+            <button class="btn-guardar" id="btn-guardar" onclick="enviarPronosticos()">Guardar resultados</button>
+        </div>
+
+        <div id="seccion-ranking" style="display: none;">
+            <div class="table-responsive">
+                <table class="tabla-ranking">
+                    <thead>
+                        <tr>
+                            <th>Pos.</th>
+                            <th style="text-align: left;">Jugador</th>
+                            <th>Pts</th>
+                            <th>Cargas</th>
+                            <th>Exactos (3p)</th>
+                            <th>Parcial (1p)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cuerpo-ranking">
+                        </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // === ATENCIÓN: PEGÁ TU ÚLTIMA URL DE APPS SCRIPT ACÁ ===
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbwiHvjIv7DOoBW13F0XS9rvCNGm_TQYUjmAjcZB1zTr-Vly-9j7ZZND4Q4QWM_mrzZMlA/exec'; 
+        
+        let usuarioActual = "";
+        let pinActual = "";
+
+        // DICCIONARIO DE PAÍSES Y BANDERAS (Códigos ISO)
+        const paisesDatos = {
+            "MEX": { nombre: "México", flag: "mx" }, "RSA": { nombre: "Sudáfrica", flag: "za" },
+            "KOR": { nombre: "Corea del Sur", flag: "kr" }, "CZE": { nombre: "Rep. Checa", flag: "cz" },
+            "CAN": { nombre: "Canadá", flag: "ca" }, "BIH": { nombre: "Bosnia", flag: "ba" },
+            "QAT": { nombre: "Qatar", flag: "qa" }, "SUI": { nombre: "Suiza", flag: "ch" },
+            "BRA": { nombre: "Brasil", flag: "br" }, "MAR": { nombre: "Marruecos", flag: "ma" },
+            "HAI": { nombre: "Haití", flag: "ht" }, "SCO": { nombre: "Escocia", flag: "gb-sct" },
+            "USA": { nombre: "Estados Unidos", flag: "us" }, "PAR": { nombre: "Paraguay", flag: "py" },
+            "AUS": { nombre: "Australia", flag: "au" }, "TUR": { nombre: "Turquía", flag: "tr" },
+            "GER": { nombre: "Alemania", flag: "de" }, "CUW": { nombre: "Curazao", flag: "cw" },
+            "CIV": { nombre: "C. de Marfil", flag: "ci" }, "ECU": { nombre: "Ecuador", flag: "ec" },
+            "NED": { nombre: "Países Bajos", flag: "nl" }, "JPN": { nombre: "Japón", flag: "jp" },
+            "SWE": { nombre: "Suecia", flag: "se" }, "TUN": { nombre: "Túnez", flag: "tn" },
+            "BEL": { nombre: "Bélgica", flag: "be" }, "EGY": { nombre: "Egipto", flag: "eg" },
+            "IRN": { nombre: "Irán", flag: "ir" }, "NZL": { nombre: "N. Zelanda", flag: "nz" },
+            "ESP": { nombre: "España", flag: "es" }, "CPV": { nombre: "Cabo Verde", flag: "cv" },
+            "KSA": { nombre: "Arabia Saudita", flag: "sa" }, "URU": { nombre: "Uruguay", flag: "uy" },
+            "FRA": { nombre: "Francia", flag: "fr" }, "SEN": { nombre: "Senegal", flag: "sn" },
+            "IRQ": { nombre: "Irak", flag: "iq" }, "NOR": { nombre: "Noruega", flag: "no" },
+            "ARG": { nombre: "Argentina", flag: "ar" }, "ALG": { nombre: "Argelia", flag: "dz" },
+            "AUT": { nombre: "Austria", flag: "at" }, "JOR": { nombre: "Jordania", flag: "jo" },
+            "POR": { nombre: "Portugal", flag: "pt" }, "COD": { nombre: "RD Congo", flag: "cd" },
+            "COL": { nombre: "Colombia", flag: "co" }, "UZB": { nombre: "Uzbekistán", flag: "uz" },
+            "ENG": { nombre: "Inglaterra", flag: "gb-eng" }, "CRO": { nombre: "Croacia", flag: "hr" },
+            "GHA": { nombre: "Ghana", flag: "gh" }, "PAN": { nombre: "Panamá", flag: "pa" }
+        };
+
+        window.onload = function() {
+            fetch(scriptURL)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('cargando').innerHTML = "⚠️ <b>Error en la base de datos:</b> " + data.error;
+                        return;
+                    }
+                    
+                    document.getElementById('cargando').style.display = 'none';
+                    document.getElementById('panel-login').style.display = 'block';
+                    
+                    const select = document.getElementById('jugador');
+                    if (data.jugadores) {
+                        data.jugadores.forEach(nombre => {
+                            let opcion = document.createElement('option');
+                            opcion.value = nombre; opcion.text = nombre;
+                            select.appendChild(opcion);
+                        });
+                    }
+
+                    const cuerpoRanking = document.getElementById('cuerpo-ranking');
+                    if (data.ranking) {
+                        data.ranking.forEach((r, index) => {
+                            let medalla = (index === 0) ? '🥇 1º' : (index === 1) ? '🥈 2º' : (index === 2) ? '🥉 3º' : `${index + 1}º`;
+                            cuerpoRanking.innerHTML += `
+                                <tr>
+                                    <td style="font-weight: bold;">${medalla}</td>
+                                    <td style="text-align: left; font-weight: bold; color: white;">${r.jugador}</td>
+                                    <td class="puntos-destacados">${r.puntos}</td>
+                                    <td class="dato-secundario">${r.pronosticosTotales}</td>
+                                    <td class="dato-secundario">${r.aciertosExactos}</td>
+                                    <td class="dato-secundario">${r.aciertosParciales}</td>
+                                </tr>
+                            `;
+                        });
+                    }
+
+                    const navFases = document.getElementById('navegacion-fases');
+                    if (data.partidos) {
+                        let fasesUnicas = [...new Set(data.partidos.map(p => p.fase))].sort();
+                        navFases.innerHTML += `<button class="btn-fase activo" onclick="filtrarFase('Todos', this)">Ver Todos</button>`;
+                        fasesUnicas.forEach(fase => {
+                            navFases.innerHTML += `<button class="btn-fase" onclick="filtrarFase('${fase}', this)">${fase}</button>`;
+                        });
+
+                        const contenedor = document.getElementById('contenedor-partidos');
+                        data.partidos.forEach(p => {
+                            let fechaObj = new Date(p.fecha);
+                            let minutos = fechaObj.getMinutes() === 0 ? '00' : (fechaObj.getMinutes() < 10 ? '0'+fechaObj.getMinutes() : fechaObj.getMinutes());
+                            let fechaLegible = `${fechaObj.getDate()}/${fechaObj.getMonth()+1}/${fechaObj.getFullYear()} - ${fechaObj.getHours()}:${minutos} hs`;
+
+                            // Obtenemos los datos visuales del diccionario
+                            let dLocal = paisesDatos[p.local] || { nombre: p.local, flag: "un" };
+                            let dVisita = paisesDatos[p.visitante] || { nombre: p.visitante, flag: "un" };
+
+                            // Dibujamos la tarjeta con la nueva estructura
+                            contenedor.innerHTML += `
+                                <div class="partido-card" data-id="${p.id}" data-fase="${p.fase}" data-fecha="${p.fecha}">
+                                    <div class="info-partido">${p.fase} | ${fechaLegible}</div>
+                                    <div class="fila-partido">
+                                        
+                                        <div class="equipo-container local">
+                                            <div class="nombres">
+                                                <span class="abrev">${p.local}</span>
+                                                <span class="nombre-completo">${dLocal.nombre}</span>
+                                            </div>
+                                            <img src="https://flagcdn.com/w40/${dLocal.flag}.png" class="bandera" alt="${p.local}">
+                                        </div>
+                                        
+                                        <div class="centro-inputs">
+                                            <input type="number" id="${p.id}-local" min="0" placeholder="-">
+                                            <span class="vs">VS</span>
+                                            <input type="number" id="${p.id}-visita" min="0" placeholder="-">
+                                        </div>
+
+                                        <div class="equipo-container visitante">
+                                            <img src="https://flagcdn.com/w40/${dVisita.flag}.png" class="bandera" alt="${p.visitante}">
+                                            <div class="nombres">
+                                                <span class="abrev">${p.visitante}</span>
+                                                <span class="nombre-completo">${dVisita.nombre}</span>
+                                            </div>
+                                        </div>
+
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+                })
+                .catch(error => { 
+                    document.getElementById('cargando').innerHTML = "❌ <b>Error de conexión.</b>"; 
+                });
+        };
+
+        function cambiarSeccion(seccion) {
+            document.getElementById('tab-prode').classList.remove('activo');
+            document.getElementById('tab-ranking').classList.remove('activo');
+            document.getElementById('seccion-prode').style.display = 'none';
+            document.getElementById('seccion-ranking').style.display = 'none';
+            
+            document.getElementById('tab-' + seccion).classList.add('activo');
+            document.getElementById('seccion-' + seccion).style.display = 'block';
+        }
+
+        function intentarIngreso() {
+            const jugador = document.getElementById('jugador').value;
+            const pin = document.getElementById('pin').value;
+            const btn = document.getElementById('btn-ingreso');
+
+            if (!jugador || pin === "") { alert("Completá tu nombre y PIN."); return; }
+            btn.innerText = "Verificando..."; btn.disabled = true;
+
+            const urlLogin = scriptURL + "?accion=login&jugador=" + encodeURIComponent(jugador) + "&pin=" + encodeURIComponent(pin);
+
+            fetch(urlLogin)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error === "PIN_INCORRECTO") {
+                        alert("❌ PIN incorrecto.");
+                        btn.innerText = "Ingresar"; btn.disabled = false;
+                        document.getElementById('pin').value = '';
+                    } else if (data.exito) {
+                        usuarioActual = jugador; 
+                        pinActual = pin;
+                        
+                        document.getElementById('panel-login').style.display = 'none';
+                        document.getElementById('panel-app').style.display = 'flex';
+                        document.getElementById('nombre-activo').innerText = jugador;
+
+                        for (let id_partido in data.pronosticos) {
+                            let inputLocal = document.getElementById(id_partido + '-local');
+                            let inputVisita = document.getElementById(id_partido + '-visita');
+                            if (inputLocal && inputVisita) {
+                                inputLocal.value = data.pronosticos[id_partido].local;
+                                inputVisita.value = data.pronosticos[id_partido].visita;
+                                inputLocal.classList.add('completado');
+                                inputVisita.classList.add('completado');
+                            }
+                        }
+                    }
+                })
+                .catch(error => { 
+                    alert("Error de conexión al validar el PIN."); 
+                    btn.innerText = "Ingresar"; btn.disabled = false; 
+                });
+        }
+
+        function filtrarFase(fase, botonPulsado) {
+            document.querySelectorAll('.btn-fase').forEach(btn => btn.classList.remove('activo'));
+            botonPulsado.classList.add('activo');
+            document.querySelectorAll('.partido-card').forEach(tarjeta => {
+                if (fase === 'Todos' || tarjeta.getAttribute('data-fase') === fase) {
+                    tarjeta.style.display = 'flex';
+                } else { tarjeta.style.display = 'none'; }
+            });
+        }
+
+        function enviarPronosticos() {
+            const resultados = [];
+            const tarjetas = document.querySelectorAll('.partido-card');
+            const ahora = new Date();
+
+            for (let tarjeta of tarjetas) {
+                let id = tarjeta.getAttribute('data-id');
+                let fechaPartido = new Date(tarjeta.getAttribute('data-fecha'));
+                let golesLocal = document.getElementById(id + '-local').value;
+                let golesVisita = document.getElementById(id + '-visita').value;
+
+                if (golesLocal !== "" && golesVisita !== "") {
+                    if (ahora >= fechaPartido) {
+                        alert(`¡El partido de ${id} ya comenzó! ⏰`);
+                        return; 
+                    }
+                    resultados.push({ id_partido: id, golesLocal: golesLocal, golesVisitante: golesVisita });
+                }
+            }
+
+            if (resultados.length === 0) { alert("No llenaste nada nuevo."); return; }
+
+            const btn = document.getElementById('btn-guardar');
+            btn.innerText = 'Guardando...'; btn.disabled = true;
+
+            const formData = new URLSearchParams();
+            formData.append('jugador', usuarioActual); 
+            formData.append('pin', pinActual);         
+            formData.append('partidos', JSON.stringify(resultados));
+
+            fetch(scriptURL, { 
+                method: 'POST', 
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData 
+            })
+            .then(() => {
+                alert(`✅ ¡Resultados guardados con éxito!`);
+                resultados.forEach(r => {
+                    document.getElementById(r.id_partido + '-local').classList.add('completado');
+                    document.getElementById(r.id_partido + '-visita').classList.add('completado');
+                });
+                btn.innerText = 'Guardar resultados'; btn.disabled = false;
+            })
+            .catch(error => { 
+                alert("Error al intentar guardar."); 
+                btn.innerText = 'Guardar resultados'; btn.disabled = false; 
+            });
+        }
+    </script>
+<script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((reg) => console.log('Service worker registrado', reg))
+                    .catch((err) => console.log('Error en service worker', err));
+            });
+        }
+    </script>
+</body>
+</html>

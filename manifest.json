@@ -1,0 +1,16 @@
+{
+  "name": "Prode Familiar 2026",
+  "short_name": "Prode 26",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#3b82f6",
+  "icons": [
+    {
+      "src": "./icono.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
