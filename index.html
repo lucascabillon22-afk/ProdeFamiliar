@@ -415,6 +415,14 @@
                     resultadoDiv.style.display = 'none';
                 }
             });
+
+            const hayEnCursoConResultado = [...document.querySelectorAll('.partido-card.en-curso')].some(t => {
+                return t.getAttribute('data-resultado-local') !== '' && t.getAttribute('data-resultado-visita') !== '';
+            });
+            document.querySelectorAll('.puntos-destacados').forEach(celda => {
+                const texto = celda.textContent.replace(' ⏳', '');
+                celda.textContent = hayEnCursoConResultado ? texto + ' ⏳' : texto;
+            });
         }
 
         function enviarPronosticos() {
