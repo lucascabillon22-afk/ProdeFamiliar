@@ -44,6 +44,7 @@
 
         .centro-inputs { display: flex; align-items: center; gap: 10px; justify-content: center; }
         input[type="number"] { width: 45px; height: 45px; background-color: #0f172a; border: 1px solid #475569; color: white; font-size: 1.2rem; text-align: center; border-radius: 8px; font-weight: bold; }
+        input[type="number"]:disabled { background-color: #1e293b; border-color: #334155; color: #475569; cursor: not-allowed; }
         input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; }
         input[type="number"].completado { border-color: #10b981; color: #10b981; }
         .vs { color: #64748b; font-size: 0.9rem; font-weight: bold; }
@@ -59,6 +60,23 @@
         .dato-secundario { color: #94a3b8; font-size: 0.9rem; }
         
         #cargando { color: #3b82f6; font-size: 1.1rem; font-weight: bold; margin-bottom: 20px; }
+
+        .badge-estado { margin-left: 10px; font-size: 0.78rem; font-weight: 700; padding: 3px 8px; border-radius: 20px; vertical-align: middle; }
+        .badge-en-curso { background-color: #ef4444; color: white; animation: pulso 1.4s infinite; }
+        .badge-finalizado { background-color: #334155; color: #94a3b8; }
+        @keyframes pulso { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+
+        .resultado-real { display: none; margin-top: 14px; text-align: center; }
+        .marcador-real { display: inline-flex; align-items: center; gap: 12px; background-color: #0f172a; border: 1px solid #475569; border-radius: 10px; padding: 8px 20px; font-size: 1.4rem; font-weight: 700; color: #f8fafc; letter-spacing: 2px; }
+        .marcador-real span { color: #64748b; font-size: 1rem; font-weight: 600; }
+        .resultado-label { color: #64748b; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+
+        .partido-card.en-curso { border-color: #ef4444; }
+        .partido-card.finalizado { border-color: #475569; opacity: 0.85; }
+
+        .marcador-real.exacto { border-color: #10b981; box-shadow: 0 0 0 1px #10b981; }
+        .marcador-real.parcial { border-color: #f59e0b; box-shadow: 0 0 0 1px #f59e0b; }
+        .marcador-real.erroneo { border-color: #ef4444; box-shadow: 0 0 0 1px #ef4444; }
     </style>
 </head>
 <body>
@@ -120,7 +138,7 @@
 
     <script>
         // === ATENCIÓN: PEGÁ TU ÚLTIMA URL DE APPS SCRIPT ACÁ ===
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbwiHvjIv7DOoBW13F0XS9rvCNGm_TQYUjmAjcZB1zTr-Vly-9j7ZZND4Q4QWM_mrzZMlA/exec'; 
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbzcNP5cGJ3ylQ6oA1rc_XzVgZUHb21r64vSfS5mGE4BBllnDM5TujFb5HxUxZC-RVg1KA/exec'; 
         
         let usuarioActual = "";
         let pinActual = "";
@@ -177,7 +195,7 @@
                     const cuerpoRanking = document.getElementById('cuerpo-ranking');
                     if (data.ranking) {
                         data.ranking.forEach((r, index) => {
-                            let medalla = (index === 0) ? '🥇 1º' : (index === 1) ? '🥈 2º' : (index === 2) ? '🥉 3º' : `${index + 1}º`;
+                            let medalla = (index === 0) ? '🥇 1º' : (index === 1) ? '🥈 2º' : `${index + 1}º`;
                             cuerpoRanking.innerHTML += `
                                 <tr>
                                     <td style="font-weight: bold;">${medalla}</td>
@@ -194,7 +212,8 @@
                     const navFases = document.getElementById('navegacion-fases');
                     if (data.partidos) {
                         let fasesUnicas = [...new Set(data.partidos.map(p => p.fase))].sort();
-                        navFases.innerHTML += `<button class="btn-fase activo" onclick="filtrarFase('Todos', this)">Ver Todos</button>`;
+                        navFases.innerHTML += `<button class="btn-fase activo" onclick="filtrarFase('Hoy', this)">📅 Hoy</button>`;
+                        navFases.innerHTML += `<button class="btn-fase" onclick="filtrarFase('Todos', this)">Ver Todos</button>`;
                         fasesUnicas.forEach(fase => {
                             navFases.innerHTML += `<button class="btn-fase" onclick="filtrarFase('${fase}', this)">${fase}</button>`;
                         });
@@ -210,11 +229,17 @@
                             let dVisita = paisesDatos[p.visitante] || { nombre: p.visitante, flag: "un" };
 
                             // Dibujamos la tarjeta con la nueva estructura
+                            let resLocal = (p.resultadoLocal !== undefined && p.resultadoLocal !== null && p.resultadoLocal !== '') ? p.resultadoLocal : '';
+                            let resVisita = (p.resultadoVisita !== undefined && p.resultadoVisita !== null && p.resultadoVisita !== '') ? p.resultadoVisita : '';
+
                             contenedor.innerHTML += `
-                                <div class="partido-card" data-id="${p.id}" data-fase="${p.fase}" data-fecha="${p.fecha}">
-                                    <div class="info-partido">${p.fase} | ${fechaLegible}</div>
+                                <div class="partido-card" data-id="${p.id}" data-fase="${p.fase}" data-fecha="${p.fecha}" data-resultado-local="${resLocal}" data-resultado-visita="${resVisita}">
+                                    <div class="info-partido">
+                                        ${p.fase} | ${fechaLegible}
+                                        <span class="badge-estado" id="badge-${p.id}"></span>
+                                    </div>
                                     <div class="fila-partido">
-                                        
+
                                         <div class="equipo-container local">
                                             <div class="nombres">
                                                 <span class="abrev">${p.local}</span>
@@ -222,7 +247,7 @@
                                             </div>
                                             <img src="https://flagcdn.com/w40/${dLocal.flag}.png" class="bandera" alt="${p.local}">
                                         </div>
-                                        
+
                                         <div class="centro-inputs">
                                             <input type="number" id="${p.id}-local" min="0" placeholder="-">
                                             <span class="vs">VS</span>
@@ -238,13 +263,21 @@
                                         </div>
 
                                     </div>
+                                    <div class="resultado-real" id="resultado-${p.id}"></div>
                                 </div>
                             `;
                         });
                     }
+
+                    actualizarEstadoPartidos();
+                    setInterval(actualizarEstadoPartidos, 60000);
+
+                    // Aplicar filtro Hoy por defecto
+                    const btnHoy = document.querySelector('.btn-fase');
+                    if (btnHoy) filtrarFase('Hoy', btnHoy);
                 })
-                .catch(error => { 
-                    document.getElementById('cargando').innerHTML = "❌ <b>Error de conexión.</b>"; 
+                .catch(error => {
+                    document.getElementById('cargando').innerHTML = "❌ <b>Error de conexión.</b>";
                 });
         };
 
@@ -293,6 +326,7 @@
                                 inputVisita.classList.add('completado');
                             }
                         }
+                        actualizarEstadoPartidos();
                     }
                 })
                 .catch(error => { 
@@ -304,10 +338,82 @@
         function filtrarFase(fase, botonPulsado) {
             document.querySelectorAll('.btn-fase').forEach(btn => btn.classList.remove('activo'));
             botonPulsado.classList.add('activo');
+            const hoy = new Date().toLocaleDateString('es-AR', { year: 'numeric', month: '2-digit', day: '2-digit' });
             document.querySelectorAll('.partido-card').forEach(tarjeta => {
-                if (fase === 'Todos' || tarjeta.getAttribute('data-fase') === fase) {
-                    tarjeta.style.display = 'flex';
-                } else { tarjeta.style.display = 'none'; }
+                let mostrar = false;
+                if (fase === 'Todos') {
+                    mostrar = true;
+                } else if (fase === 'Hoy') {
+                    let fechaPartido = new Date(tarjeta.getAttribute('data-fecha'));
+                    let fechaPartidoStr = fechaPartido.toLocaleDateString('es-AR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+                    mostrar = (fechaPartidoStr === hoy);
+                } else {
+                    mostrar = tarjeta.getAttribute('data-fase') === fase;
+                }
+                tarjeta.style.display = mostrar ? 'flex' : 'none';
+            });
+        }
+
+        function actualizarEstadoPartidos() {
+            const ahora = new Date();
+            document.querySelectorAll('.partido-card').forEach(tarjeta => {
+                const id = tarjeta.getAttribute('data-id');
+                const fechaPartido = new Date(tarjeta.getAttribute('data-fecha'));
+                const diffMin = (ahora - fechaPartido) / 60000;
+                const badge = document.getElementById('badge-' + id);
+                const resultadoDiv = document.getElementById('resultado-' + id);
+                const resLocal = tarjeta.getAttribute('data-resultado-local');
+                const resVisita = tarjeta.getAttribute('data-resultado-visita');
+                const tieneResultado = resLocal !== '' && resVisita !== '';
+
+                if (diffMin >= 0) {
+                    const iL = document.getElementById(id + '-local');
+                    const iV = document.getElementById(id + '-visita');
+                    if (iL) iL.disabled = true;
+                    if (iV) iV.disabled = true;
+                }
+
+                if (diffMin >= 0 && diffMin < 115) {
+                    tarjeta.classList.add('en-curso');
+                    tarjeta.classList.remove('finalizado');
+                    badge.innerHTML = '<span class="badge-estado badge-en-curso">🔴 EN CURSO</span>';
+                    if (tieneResultado) {
+                        resultadoDiv.innerHTML = `<div class="resultado-label">Resultado parcial</div><div class="marcador-real">${resLocal} <span>-</span> ${resVisita}</div>`;
+                        resultadoDiv.style.display = 'block';
+                    }
+                } else if (diffMin >= 115) {
+                    tarjeta.classList.add('finalizado');
+                    tarjeta.classList.remove('en-curso');
+                    badge.innerHTML = '<span class="badge-estado badge-finalizado">✅ FINALIZADO</span>';
+                    if (tieneResultado) {
+                        resultadoDiv.innerHTML = `<div class="resultado-label">Resultado final</div><div class="marcador-real">${resLocal} <span>-</span> ${resVisita}</div>`;
+                        resultadoDiv.style.display = 'block';
+
+                        const inputLocal = document.getElementById(id + '-local');
+                        const inputVisita = document.getElementById(id + '-visita');
+                        const marcador = resultadoDiv.querySelector('.marcador-real');
+                        if (marcador && inputLocal && inputVisita && inputLocal.value !== '' && inputVisita.value !== '') {
+                            const predL = parseInt(inputLocal.value);
+                            const predV = parseInt(inputVisita.value);
+                            const resL = parseInt(resLocal);
+                            const resV = parseInt(resVisita);
+                            let clase;
+                            if (predL === resL && predV === resV) {
+                                clase = 'exacto';
+                            } else if (Math.sign(predL - predV) === Math.sign(resL - resV)) {
+                                clase = 'parcial';
+                            } else {
+                                clase = 'erroneo';
+                            }
+                            marcador.classList.remove('exacto', 'parcial', 'erroneo');
+                            marcador.classList.add(clase);
+                        }
+                    }
+                } else {
+                    tarjeta.classList.remove('en-curso', 'finalizado');
+                    badge.innerHTML = '';
+                    resultadoDiv.style.display = 'none';
+                }
             });
         }
 
