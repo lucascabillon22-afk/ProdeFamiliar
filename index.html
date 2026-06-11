@@ -138,7 +138,7 @@
 
     <script>
         // === ATENCIÓN: PEGÁ TU ÚLTIMA URL DE APPS SCRIPT ACÁ ===
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbzcNP5cGJ3ylQ6oA1rc_XzVgZUHb21r64vSfS5mGE4BBllnDM5TujFb5HxUxZC-RVg1KA/exec'; 
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbw5fWj47pyOJ9B69F3x3YD7hpR09jQPSa-kSbm_R8wS6i4u_5JRora7hcy4AAbxpOEPFg/exec'; 
         
         let usuarioActual = "";
         let pinActual = "";
@@ -425,14 +425,16 @@
             for (let tarjeta of tarjetas) {
                 let id = tarjeta.getAttribute('data-id');
                 let fechaPartido = new Date(tarjeta.getAttribute('data-fecha'));
-                let golesLocal = document.getElementById(id + '-local').value;
-                let golesVisita = document.getElementById(id + '-visita').value;
+                let inputLocal = document.getElementById(id + '-local');
+                let inputVisita = document.getElementById(id + '-visita');
+
+                if (inputLocal.disabled || inputVisita.disabled) continue;
+
+                let golesLocal = inputLocal.value;
+                let golesVisita = inputVisita.value;
 
                 if (golesLocal !== "" && golesVisita !== "") {
-                    if (ahora >= fechaPartido) {
-                        alert(`¡El partido de ${id} ya comenzó! ⏰`);
-                        return; 
-                    }
+                    if (ahora >= fechaPartido) continue;
                     resultados.push({ id_partido: id, golesLocal: golesLocal, golesVisitante: golesVisita });
                 }
             }
