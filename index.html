@@ -377,11 +377,10 @@
                     if (iV) iV.disabled = true;
                 }
 
-                // Determinar estado desde la API
+                // Estado por tiempo, marcador por API
                 let estado;
-                if (estadoAPI === 'FINISHED') estado = 'FINALIZADO';
-                else if (estadoAPI === 'IN_PLAY') estado = 'EN_CURSO';
-                else if (estadoAPI === 'PAUSED') estado = 'PAUSA';
+                if (diffMin >= 115) estado = 'FINALIZADO';
+                else if (diffMin >= 0) estado = 'EN_CURSO';
                 else estado = 'PENDIENTE';
 
                 if (estado === 'EN_CURSO' || estado === 'PAUSA') {
