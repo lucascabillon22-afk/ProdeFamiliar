@@ -29,7 +29,7 @@
         .btn-fase.activo { background-color: #3b82f6; color: white; border-color: #3b82f6; }
 
         .partido-card { background-color: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 15px 20px; margin-bottom: 15px; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; }
-        .info-partido { color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; text-align: center; border-bottom: 1px solid #334155; padding-bottom: 10px; }
+        .info-partido { display: flex; justify-content: space-between; align-items: center; color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; border-bottom: 1px solid #334155; padding-bottom: 10px; }
         
         /* NUEVO: Estilos para Banderas y Nombres Completos */
         .fila-partido { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 10px; }
@@ -63,8 +63,10 @@
 
         .badge-estado { margin-left: 10px; font-size: 0.78rem; font-weight: 700; padding: 3px 8px; border-radius: 20px; vertical-align: middle; }
         .badge-en-curso { background-color: #ef4444; color: white; animation: pulso 1.4s infinite; }
+        .badge-pausa { background-color: #f59e0b; color: white; }
         .badge-finalizado { background-color: #334155; color: #94a3b8; }
         @keyframes pulso { 0%,100% { opacity: 1; } 50% { opacity: 0.55; } }
+        .partido-card.pausa { border-color: #f59e0b; }
 
         .resultado-real { display: none; margin-top: 14px; text-align: center; }
         .marcador-real { display: inline-flex; align-items: center; gap: 12px; background-color: #0f172a; border: 1px solid #475569; border-radius: 10px; padding: 8px 20px; font-size: 1.4rem; font-weight: 700; color: #f8fafc; letter-spacing: 2px; }
@@ -138,7 +140,7 @@
 
     <script>
         // === ATENCIÓN: PEGÁ TU ÚLTIMA URL DE APPS SCRIPT ACÁ ===
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbw5fWj47pyOJ9B69F3x3YD7hpR09jQPSa-kSbm_R8wS6i4u_5JRora7hcy4AAbxpOEPFg/exec'; 
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbzyx1Zb5ogHjbRB5ZTAbujwa1WZEBfrtPnU0NfH-rJrO5zLBbF6kefhHIpKMmei3G2UPA/exec';
         
         let usuarioActual = "";
         let pinActual = "";
@@ -233,7 +235,7 @@
                             let resVisita = (p.resultadoVisita !== undefined && p.resultadoVisita !== null && p.resultadoVisita !== '') ? p.resultadoVisita : '';
 
                             contenedor.innerHTML += `
-                                <div class="partido-card" data-id="${p.id}" data-fase="${p.fase}" data-fecha="${p.fecha}" data-resultado-local="${resLocal}" data-resultado-visita="${resVisita}">
+                                <div class="partido-card" data-id="${p.id}" data-fase="${p.fase}" data-fecha="${p.fecha}" data-resultado-local="${resLocal}" data-resultado-visita="${resVisita}" data-estado="${p.estado || ''}" data-minuto="${p.minuto || ''}">
                                     <div class="info-partido">
                                         ${p.fase} | ${fechaLegible}
                                         <span class="badge-estado" id="badge-${p.id}"></span>
@@ -270,7 +272,7 @@
                     }
 
                     actualizarEstadoPartidos();
-                    setInterval(actualizarEstadoPartidos, 60000);
+                    setInterval(actualizarEstadoPartidos, 30000);
 
                     // Aplicar filtro Hoy por defecto
                     const btnHoy = document.querySelector('.btn-fase');
@@ -365,6 +367,8 @@
                 const resLocal = tarjeta.getAttribute('data-resultado-local');
                 const resVisita = tarjeta.getAttribute('data-resultado-visita');
                 const tieneResultado = resLocal !== '' && resVisita !== '';
+                const estadoAPI = tarjeta.getAttribute('data-estado');
+                const minutoAPI = tarjeta.getAttribute('data-minuto');
 
                 if (diffMin >= 0) {
                     const iL = document.getElementById(id + '-local');
@@ -373,17 +377,34 @@
                     if (iV) iV.disabled = true;
                 }
 
-                if (diffMin >= 0 && diffMin < 115) {
+                // Determinar estado: prioridad API, fallback por tiempo
+                let estado;
+                if (estadoAPI === 'FINISHED') estado = 'FINALIZADO';
+                else if (estadoAPI === 'IN_PLAY') estado = 'EN_CURSO';
+                else if (estadoAPI === 'PAUSED') estado = 'PAUSA';
+                else if (diffMin >= 115) estado = 'FINALIZADO';
+                else if (diffMin >= 0) estado = 'EN_CURSO';
+                else estado = 'PENDIENTE';
+
+                if (estado === 'EN_CURSO' || estado === 'PAUSA') {
                     tarjeta.classList.add('en-curso');
-                    tarjeta.classList.remove('finalizado');
-                    badge.innerHTML = '<span class="badge-estado badge-en-curso">🔴 EN CURSO</span>';
+                    tarjeta.classList.remove('finalizado', 'pausa');
+                    if (estado === 'PAUSA') tarjeta.classList.add('pausa');
+
+                    const badgeClass = estado === 'PAUSA' ? 'badge-pausa' : 'badge-en-curso';
+                    const badgeIcon = estado === 'PAUSA' ? '⏸ PAUSA' : '🔴 EN CURSO';
+                    const minDisplay = minutoAPI ? `${minutoAPI}'` : (estado === 'PAUSA' ? '' : `${Math.min(Math.floor(diffMin), 90)}'`);
+                    const minutoHtml = (minDisplay && estado !== 'PAUSA') ? ` <span style="color:#ef4444;font-weight:700;">${minDisplay}</span>` : '';
+                    badge.innerHTML = `<span class="badge-estado ${badgeClass}">${badgeIcon}</span>${minutoHtml}`;
+
                     if (tieneResultado) {
-                        resultadoDiv.innerHTML = `<div class="resultado-label">Resultado parcial</div><div class="marcador-real">${resLocal} <span>-</span> ${resVisita}</div>`;
+                        const labelVivo = estado === 'PAUSA' ? 'Al descanso' : 'Resultado parcial';
+                        resultadoDiv.innerHTML = `<div class="resultado-label">${labelVivo}</div><div class="marcador-real">${resLocal} <span>-</span> ${resVisita}</div>`;
                         resultadoDiv.style.display = 'block';
                     }
-                } else if (diffMin >= 115) {
+                } else if (estado === 'FINALIZADO') {
                     tarjeta.classList.add('finalizado');
-                    tarjeta.classList.remove('en-curso');
+                    tarjeta.classList.remove('en-curso', 'pausa');
                     badge.innerHTML = '<span class="badge-estado badge-finalizado">✅ FINALIZADO</span>';
                     if (tieneResultado) {
                         resultadoDiv.innerHTML = `<div class="resultado-label">Resultado final</div><div class="marcador-real">${resLocal} <span>-</span> ${resVisita}</div>`;
@@ -398,19 +419,15 @@
                             const resL = parseInt(resLocal);
                             const resV = parseInt(resVisita);
                             let clase;
-                            if (predL === resL && predV === resV) {
-                                clase = 'exacto';
-                            } else if (Math.sign(predL - predV) === Math.sign(resL - resV)) {
-                                clase = 'parcial';
-                            } else {
-                                clase = 'erroneo';
-                            }
+                            if (predL === resL && predV === resV) clase = 'exacto';
+                            else if (Math.sign(predL - predV) === Math.sign(resL - resV)) clase = 'parcial';
+                            else clase = 'erroneo';
                             marcador.classList.remove('exacto', 'parcial', 'erroneo');
                             marcador.classList.add(clase);
                         }
                     }
                 } else {
-                    tarjeta.classList.remove('en-curso', 'finalizado');
+                    tarjeta.classList.remove('en-curso', 'finalizado', 'pausa');
                     badge.innerHTML = '';
                     resultadoDiv.style.display = 'none';
                 }
