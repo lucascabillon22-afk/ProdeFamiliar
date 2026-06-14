@@ -389,15 +389,9 @@
                     if (estado === 'PAUSA') tarjeta.classList.add('pausa');
 
                     let minDisplay;
-                    if (minutoAPI) {
-                        minDisplay = `${minutoAPI}'`;
-                    } else if (diffMin < 47) {
-                        minDisplay = `${Math.min(Math.floor(diffMin), 45)}'`;
-                    } else if (diffMin < 62) {
-                        minDisplay = 'ET';
-                    } else {
-                        minDisplay = `${Math.min(Math.floor(diffMin - 62) + 45, 90)}'`;
-                    }
+                    if (diffMin < 47) minDisplay = `${Math.min(Math.floor(diffMin), 45)}'`;
+                    else if (diffMin < 62) minDisplay = 'ET';
+                    else minDisplay = `${Math.min(Math.floor(diffMin - 62) + 45, 90)}'`;
                     badge.innerHTML = `<span class="badge-estado badge-en-curso">🔴 EN CURSO</span> <span style="color:#ef4444;font-weight:700;">${minDisplay}</span>`;
 
                     if (tieneResultado) {
