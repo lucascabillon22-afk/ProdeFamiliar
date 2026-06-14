@@ -388,11 +388,11 @@
                     tarjeta.classList.remove('finalizado', 'pausa');
                     if (estado === 'PAUSA') tarjeta.classList.add('pausa');
 
-                    const badgeClass = estado === 'PAUSA' ? 'badge-pausa' : 'badge-en-curso';
-                    const badgeIcon = estado === 'PAUSA' ? '⏸ PAUSA' : '🔴 EN CURSO';
-                    const minDisplay = minutoAPI ? `${minutoAPI}'` : (estado === 'PAUSA' ? '' : `${Math.min(Math.floor(diffMin), 90)}'`);
-                    const minutoHtml = (minDisplay && estado !== 'PAUSA') ? ` <span style="color:#ef4444;font-weight:700;">${minDisplay}</span>` : '';
-                    badge.innerHTML = `<span class="badge-estado ${badgeClass}">${badgeIcon}</span>${minutoHtml}`;
+                    let minDisplay;
+                    if (diffMin < 47) minDisplay = `${Math.min(Math.floor(diffMin), 45)}'`;
+                    else if (diffMin < 62) minDisplay = 'ET';
+                    else minDisplay = `${Math.min(Math.floor(diffMin - 62) + 45, 90)}'`;
+                    badge.innerHTML = `<span class="badge-estado badge-en-curso">🔴 EN CURSO</span> <span style="color:#ef4444;font-weight:700;">${minDisplay}</span>`;
 
                     if (tieneResultado) {
                         const labelVivo = estado === 'PAUSA' ? 'Al descanso' : 'Resultado parcial';
