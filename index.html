@@ -79,6 +79,15 @@
         .marcador-real.exacto { border-color: #10b981; box-shadow: 0 0 0 1px #10b981; }
         .marcador-real.parcial { border-color: #f59e0b; box-shadow: 0 0 0 1px #f59e0b; }
         .marcador-real.erroneo { border-color: #ef4444; box-shadow: 0 0 0 1px #ef4444; }
+
+        .clasificado-selector { margin-top: 12px; text-align: center; }
+        .clasificado-label { color: #94a3b8; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+        .clasificado-btns { display: flex; gap: 10px; justify-content: center; }
+        .btn-clasificado { background-color: #0f172a; color: #94a3b8; border: 1px solid #475569; padding: 8px 20px; border-radius: 8px; font-family: 'Instrument Sans', sans-serif; font-weight: 700; font-size: 0.95rem; cursor: pointer; transition: 0.2s; }
+        .btn-clasificado.seleccionado { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+        .btn-clasificado:disabled { cursor: not-allowed; opacity: 0.5; }
+        .clasificado-real { margin-top: 8px; font-size: 0.8rem; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px; }
+        .clasificado-real span { color: #f8fafc; font-weight: 700; }
     </style>
 </head>
 <body>
@@ -140,7 +149,7 @@
 
     <script>
         // === ATENCIÓN: PEGÁ TU ÚLTIMA URL DE APPS SCRIPT ACÁ ===
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbyi2Do489OfzZYdMem6Yf8h5zwV6SgYGov5zMDWNUVWZK8elUI-LwEMLLowNBx7UcVCBA/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxMx-9e0Eo7iCSCBlDRVnTeRG_Syyt6FGCNkwdrbHOP9E4p1uFOdsOqFFsJlaC1OhsM9w/exec';
         
         let usuarioActual = "";
         let pinActual = "";
@@ -213,12 +222,15 @@
 
                     const navFases = document.getElementById('navegacion-fases');
                     if (data.partidos) {
-                        let fasesUnicas = [...new Set(data.partidos.map(p => p.fase))].sort();
-                        navFases.innerHTML += `<button class="btn-fase activo" onclick="filtrarFase('Hoy', this)">📅 Hoy</button>`;
-                        navFases.innerHTML += `<button class="btn-fase" onclick="filtrarFase('Todos', this)">Ver Todos</button>`;
-                        fasesUnicas.forEach(fase => {
-                            navFases.innerHTML += `<button class="btn-fase" onclick="filtrarFase('${fase}', this)">${fase}</button>`;
-                        });
+                        navFases.innerHTML = `
+                            <button class="btn-fase activo" onclick="filtrarFase('Hoy', this)">📅 Hoy</button>
+                            <button class="btn-fase" onclick="filtrarFase('Grupos', this)">Fase de Grupos</button>
+                            <button class="btn-fase" onclick="filtrarFase('Dieciseisavos', this)">Dieciseisavos</button>
+                            <button class="btn-fase" onclick="filtrarFase('Octavos', this)">Octavos</button>
+                            <button class="btn-fase" onclick="filtrarFase('Cuartos', this)">Cuartos</button>
+                            <button class="btn-fase" onclick="filtrarFase('Semifinal', this)">Semifinal</button>
+                            <button class="btn-fase" onclick="filtrarFase('Final', this)">Final</button>
+                        `;
 
                         const contenedor = document.getElementById('contenedor-partidos');
                         data.partidos.forEach(p => {
@@ -233,9 +245,20 @@
                             // Dibujamos la tarjeta con la nueva estructura
                             let resLocal = (p.resultadoLocal !== undefined && p.resultadoLocal !== null && p.resultadoLocal !== '') ? p.resultadoLocal : '';
                             let resVisita = (p.resultadoVisita !== undefined && p.resultadoVisita !== null && p.resultadoVisita !== '') ? p.resultadoVisita : '';
+                            let esEliminatoria = !p.fase.startsWith('Grupo');
+                            let clasificadoRealVal = p.clasificadoReal || '';
+
+                            let clasificadoSelectorHtml = esEliminatoria ? `
+                                <div class="clasificado-selector" id="clasificado-sel-${p.id}">
+                                    <div class="clasificado-label">¿Quién clasifica?</div>
+                                    <div class="clasificado-btns">
+                                        <button class="btn-clasificado" id="clas-${p.id}-local" data-equipo="${p.local}" onclick="selClasificado('${p.id}', '${p.local}')">${p.local}</button>
+                                        <button class="btn-clasificado" id="clas-${p.id}-visita" data-equipo="${p.visitante}" onclick="selClasificado('${p.id}', '${p.visitante}')">${p.visitante}</button>
+                                    </div>
+                                </div>` : '';
 
                             contenedor.innerHTML += `
-                                <div class="partido-card" data-id="${p.id}" data-fase="${p.fase}" data-fecha="${p.fecha}" data-resultado-local="${resLocal}" data-resultado-visita="${resVisita}" data-estado="${p.estado || ''}" data-minuto="${p.minuto || ''}">
+                                <div class="partido-card" data-id="${p.id}" data-fase="${p.fase}" data-fecha="${p.fecha}" data-resultado-local="${resLocal}" data-resultado-visita="${resVisita}" data-estado="${p.estado || ''}" data-minuto="${p.minuto || ''}" data-local="${p.local}" data-visitante="${p.visitante}" data-clasificado-real="${clasificadoRealVal}" data-es-eliminatoria="${esEliminatoria}">
                                     <div class="info-partido">
                                         ${p.fase} | ${fechaLegible}
                                         <span class="badge-estado" id="badge-${p.id}"></span>
@@ -265,6 +288,7 @@
                                         </div>
 
                                     </div>
+                                    ${clasificadoSelectorHtml}
                                     <div class="resultado-real" id="resultado-${p.id}"></div>
                                 </div>
                             `;
@@ -327,6 +351,8 @@
                                 inputLocal.classList.add('completado');
                                 inputVisita.classList.add('completado');
                             }
+                            const clasificadoGuardado = data.pronosticos[id_partido].clasificado;
+                            if (clasificadoGuardado) selClasificado(id_partido, clasificadoGuardado);
                         }
                         actualizarEstadoPartidos();
                     }
@@ -342,18 +368,27 @@
             botonPulsado.classList.add('activo');
             const hoy = new Date().toLocaleDateString('es-AR', { year: 'numeric', month: '2-digit', day: '2-digit' });
             document.querySelectorAll('.partido-card').forEach(tarjeta => {
+                const f = tarjeta.getAttribute('data-fase');
                 let mostrar = false;
-                if (fase === 'Todos') {
-                    mostrar = true;
-                } else if (fase === 'Hoy') {
-                    let fechaPartido = new Date(tarjeta.getAttribute('data-fecha'));
-                    let fechaPartidoStr = fechaPartido.toLocaleDateString('es-AR', { year: 'numeric', month: '2-digit', day: '2-digit' });
+                if (fase === 'Hoy') {
+                    let fechaPartidoStr = new Date(tarjeta.getAttribute('data-fecha')).toLocaleDateString('es-AR', { year: 'numeric', month: '2-digit', day: '2-digit' });
                     mostrar = (fechaPartidoStr === hoy);
+                } else if (fase === 'Grupos') {
+                    mostrar = f.startsWith('Grupo');
                 } else {
-                    mostrar = tarjeta.getAttribute('data-fase') === fase;
+                    mostrar = f === fase;
                 }
                 tarjeta.style.display = mostrar ? 'flex' : 'none';
             });
+        }
+
+        function selClasificado(id, equipo) {
+            const btnLocal = document.getElementById('clas-' + id + '-local');
+            const btnVisita = document.getElementById('clas-' + id + '-visita');
+            if (btnLocal) btnLocal.classList.remove('seleccionado');
+            if (btnVisita) btnVisita.classList.remove('seleccionado');
+            const btnSel = btnLocal && btnLocal.getAttribute('data-equipo') === equipo ? btnLocal : btnVisita;
+            if (btnSel) btnSel.classList.add('seleccionado');
         }
 
         function actualizarEstadoPartidos() {
@@ -375,6 +410,10 @@
                     const iV = document.getElementById(id + '-visita');
                     if (iL) iL.disabled = true;
                     if (iV) iV.disabled = true;
+                    const bL = document.getElementById('clas-' + id + '-local');
+                    const bV = document.getElementById('clas-' + id + '-visita');
+                    if (bL) bL.disabled = true;
+                    if (bV) bV.disabled = true;
                 }
 
                 // Estado por tiempo, marcador por API
@@ -404,7 +443,12 @@
                     tarjeta.classList.remove('en-curso', 'pausa');
                     badge.innerHTML = '<span class="badge-estado badge-finalizado">✅ FINALIZADO</span>';
                     if (tieneResultado) {
-                        resultadoDiv.innerHTML = `<div class="resultado-label">Resultado final</div><div class="marcador-real">${resLocal} <span>-</span> ${resVisita}</div>`;
+                        const esElim = tarjeta.getAttribute('data-es-eliminatoria') === 'true';
+                        const clasificadoReal = tarjeta.getAttribute('data-clasificado-real');
+                        const clasificadoHtml = (esElim && clasificadoReal)
+                            ? `<div class="clasificado-real">Clasifica: <span>${clasificadoReal}</span></div>` : '';
+
+                        resultadoDiv.innerHTML = `<div class="resultado-label">Resultado final</div><div class="marcador-real">${resLocal} <span>-</span> ${resVisita}</div>${clasificadoHtml}`;
                         resultadoDiv.style.display = 'block';
 
                         const inputLocal = document.getElementById(id + '-local');
@@ -415,12 +459,30 @@
                             const predV = parseInt(inputVisita.value);
                             const resL = parseInt(resLocal);
                             const resV = parseInt(resVisita);
-                            let clase;
-                            if (predL === resL && predV === resV) clase = 'exacto';
-                            else if (Math.sign(predL - predV) === Math.sign(resL - resV)) clase = 'parcial';
-                            else clase = 'erroneo';
-                            marcador.classList.remove('exacto', 'parcial', 'erroneo');
-                            marcador.classList.add(clase);
+                            if (esElim) {
+                                const btnSel = document.querySelector(`#clasificado-sel-${id} .btn-clasificado.seleccionado`);
+                                const predClasif = btnSel ? btnSel.getAttribute('data-equipo') : '';
+                                const exacto = predL === resL && predV === resV;
+                                const predEmpate = predL === predV;
+                                const realEmpate = resL === resV;
+                                const empateOk = predEmpate && realEmpate;
+                                const tendenciaOk = !predEmpate && !realEmpate && Math.sign(predL - predV) === Math.sign(resL - resV);
+                                const clasificadoOk = predClasif === clasificadoReal;
+                                let clase;
+                                if (exacto && clasificadoOk) clase = 'exacto';
+                                else if (exacto || (empateOk && clasificadoOk) || (tendenciaOk && clasificadoOk)) clase = 'parcial';
+                                else if (empateOk || clasificadoOk) clase = 'parcial';
+                                else clase = 'erroneo';
+                                marcador.classList.remove('exacto', 'parcial', 'erroneo');
+                                marcador.classList.add(clase);
+                            } else {
+                                let clase;
+                                if (predL === parseInt(resLocal) && predV === parseInt(resVisita)) clase = 'exacto';
+                                else if (Math.sign(predL - predV) === Math.sign(parseInt(resLocal) - parseInt(resVisita))) clase = 'parcial';
+                                else clase = 'erroneo';
+                                marcador.classList.remove('exacto', 'parcial', 'erroneo');
+                                marcador.classList.add(clase);
+                            }
                         }
                     }
                 } else {
@@ -457,7 +519,11 @@
 
                 if (golesLocal !== "" && golesVisita !== "") {
                     if (ahora >= fechaPartido) continue;
-                    resultados.push({ id_partido: id, golesLocal: golesLocal, golesVisitante: golesVisita });
+                    const esElim = tarjeta.getAttribute('data-es-eliminatoria') === 'true';
+                    const btnSel = esElim ? document.querySelector(`#clasificado-sel-${id} .btn-clasificado.seleccionado`) : null;
+                    const clasificado = btnSel ? btnSel.getAttribute('data-equipo') : '';
+                    if (esElim && !clasificado) { alert(`Falta seleccionar quién clasifica en el partido ${id}.`); return; }
+                    resultados.push({ id_partido: id, golesLocal, golesVisitante: golesVisita, clasificado });
                 }
             }
 
