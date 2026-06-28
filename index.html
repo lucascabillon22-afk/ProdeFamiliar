@@ -224,7 +224,6 @@
                     if (data.partidos) {
                         navFases.innerHTML = `
                             <button class="btn-fase activo" onclick="filtrarFase('Hoy', this)">📅 Hoy</button>
-                            <button class="btn-fase" onclick="filtrarFase('Grupos', this)">Fase de Grupos</button>
                             <button class="btn-fase" onclick="filtrarFase('Dieciseisavos', this)">Dieciseisavos</button>
                             <button class="btn-fase" onclick="filtrarFase('Octavos', this)">Octavos</button>
                             <button class="btn-fase" onclick="filtrarFase('Cuartos', this)">Cuartos</button>
@@ -250,10 +249,10 @@
 
                             let clasificadoSelectorHtml = esEliminatoria ? `
                                 <div class="clasificado-selector" id="clasificado-sel-${p.id}">
-                                    <div class="clasificado-label">¿Quién clasifica?</div>
+                                    <div class="clasificado-label" id="clasificado-label-${p.id}" style="color:#475569;">Ingresá empate para elegir quién clasifica</div>
                                     <div class="clasificado-btns">
-                                        <button class="btn-clasificado" id="clas-${p.id}-local" data-equipo="${p.local}" onclick="selClasificado('${p.id}', '${p.local}')">${p.local}</button>
-                                        <button class="btn-clasificado" id="clas-${p.id}-visita" data-equipo="${p.visitante}" onclick="selClasificado('${p.id}', '${p.visitante}')">${p.visitante}</button>
+                                        <button class="btn-clasificado" id="clas-${p.id}-local" data-equipo="${p.local}" onclick="selClasificado('${p.id}', '${p.local}')" disabled>${p.local}</button>
+                                        <button class="btn-clasificado" id="clas-${p.id}-visita" data-equipo="${p.visitante}" onclick="selClasificado('${p.id}', '${p.visitante}')" disabled>${p.visitante}</button>
                                     </div>
                                 </div>` : '';
 
@@ -294,6 +293,15 @@
                             `;
                         });
                     }
+
+                    // Listeners para botones de clasificado en eliminatorias
+                    document.querySelectorAll('.partido-card[data-es-eliminatoria="true"]').forEach(tarjeta => {
+                        const id = tarjeta.getAttribute('data-id');
+                        const iL = document.getElementById(id + '-local');
+                        const iV = document.getElementById(id + '-visita');
+                        if (iL) iL.addEventListener('input', () => actualizarBotonesClasificado(id));
+                        if (iV) iV.addEventListener('input', () => actualizarBotonesClasificado(id));
+                    });
 
                     actualizarEstadoPartidos();
                     setInterval(actualizarEstadoPartidos, 30000);
@@ -351,6 +359,7 @@
                                 inputLocal.classList.add('completado');
                                 inputVisita.classList.add('completado');
                             }
+                            actualizarBotonesClasificado(id_partido);
                             const clasificadoGuardado = data.pronosticos[id_partido].clasificado;
                             if (clasificadoGuardado) selClasificado(id_partido, clasificadoGuardado);
                         }
@@ -380,6 +389,27 @@
                 }
                 tarjeta.style.display = mostrar ? 'flex' : 'none';
             });
+        }
+
+        function actualizarBotonesClasificado(id) {
+            const iL = document.getElementById(id + '-local');
+            const iV = document.getElementById(id + '-visita');
+            const bL = document.getElementById('clas-' + id + '-local');
+            const bV = document.getElementById('clas-' + id + '-visita');
+            const label = document.getElementById('clasificado-label-' + id);
+            if (!bL || !bV) return;
+            if (iL.disabled) return; // partido ya empezó, manejado por actualizarEstadoPartidos
+            const esEmpate = iL.value !== '' && iV.value !== '' && iL.value === iV.value;
+            bL.disabled = !esEmpate;
+            bV.disabled = !esEmpate;
+            if (label) {
+                label.textContent = esEmpate ? '¿Quién clasifica?' : 'Ingresá empate para elegir quién clasifica';
+                label.style.color = esEmpate ? '#94a3b8' : '#475569';
+            }
+            if (!esEmpate) {
+                bL.classList.remove('seleccionado');
+                bV.classList.remove('seleccionado');
+            }
         }
 
         function selClasificado(id, equipo) {
