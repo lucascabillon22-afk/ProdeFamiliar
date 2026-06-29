@@ -135,8 +135,6 @@
                             <th style="text-align: left;">Jugador</th>
                             <th>Pts</th>
                             <th>Cargas</th>
-                            <th>Exactos (3p)</th>
-                            <th>Parcial (1p)</th>
                         </tr>
                     </thead>
                     <tbody id="cuerpo-ranking">
@@ -149,7 +147,7 @@
 
     <script>
         // === ATENCIÓN: PEGÁ TU ÚLTIMA URL DE APPS SCRIPT ACÁ ===
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbxMx-9e0Eo7iCSCBlDRVnTeRG_Syyt6FGCNkwdrbHOP9E4p1uFOdsOqFFsJlaC1OhsM9w/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbz5W-u_xVbTqPviSeLjEJwXPu94bkr-Iz4Popvgxv2p8rvEnFNIOCZ3nzlxZ_kVPdcnHA/exec';
         
         let usuarioActual = "";
         let pinActual = "";
@@ -213,8 +211,6 @@
                                     <td style="text-align: left; font-weight: bold; color: white;">${r.jugador}</td>
                                     <td class="puntos-destacados">${r.puntos}</td>
                                     <td class="dato-secundario">${r.pronosticosTotales}</td>
-                                    <td class="dato-secundario">${r.aciertosExactos}</td>
-                                    <td class="dato-secundario">${r.aciertosParciales}</td>
                                 </tr>
                             `;
                         });
@@ -228,7 +224,7 @@
                             <button class="btn-fase" onclick="filtrarFase('Octavos', this)">Octavos</button>
                             <button class="btn-fase" onclick="filtrarFase('Cuartos', this)">Cuartos</button>
                             <button class="btn-fase" onclick="filtrarFase('Semifinal', this)">Semifinal</button>
-                            <button class="btn-fase" onclick="filtrarFase('Final', this)">Final</button>
+                            <button class="btn-fase" onclick="filtrarFase('Final', this)">Final / 3° Puesto</button>
                         `;
 
                         const contenedor = document.getElementById('contenedor-partidos');
@@ -384,6 +380,8 @@
                     mostrar = (fechaPartidoStr === hoy);
                 } else if (fase === 'Grupos') {
                     mostrar = f.startsWith('Grupo');
+                } else if (fase === 'Final') {
+                    mostrar = f === 'Final' || f === 'Tercer Puesto';
                 } else {
                     mostrar = f === fase;
                 }
@@ -419,6 +417,30 @@
             if (btnVisita) btnVisita.classList.remove('seleccionado');
             const btnSel = btnLocal && btnLocal.getAttribute('data-equipo') === equipo ? btnLocal : btnVisita;
             if (btnSel) btnSel.classList.add('seleccionado');
+        }
+
+        function calcularPuntosPartido(predL, predV, predClasif, resL, resV, resClasif, equipoLocal, equipoVisita, esElim) {
+            if (esElim) {
+                const exacto = predL === resL && predV === resV;
+                const predEmpate = predL === predV;
+                const realEmpate = resL === resV;
+                const empateOk = predEmpate && realEmpate;
+                const tendenciaOk = !predEmpate && !realEmpate && Math.sign(predL - predV) === Math.sign(resL - resV);
+                const predClasifEfectivo = predEmpate ? predClasif : (predL > predV ? equipoLocal : equipoVisita);
+                const realClasifEfectivo = realEmpate ? resClasif : (resL > resV ? equipoLocal : equipoVisita);
+                const clasificadoOk = !!(predClasifEfectivo && realClasifEfectivo && predClasifEfectivo === realClasifEfectivo);
+                if (exacto && clasificadoOk) return 10;
+                if (exacto && !clasificadoOk) return 5;
+                if (empateOk && clasificadoOk) return 4;
+                if (empateOk && !clasificadoOk) return 1;
+                if (tendenciaOk && clasificadoOk) return 4;
+                if (clasificadoOk) return 2;
+                return 0;
+            } else {
+                if (predL === resL && predV === resV) return 3;
+                if (Math.sign(predL - predV) === Math.sign(resL - resV)) return 1;
+                return 0;
+            }
         }
 
         function actualizarEstadoPartidos() {
@@ -471,48 +493,46 @@
                 } else if (estado === 'FINALIZADO') {
                     tarjeta.classList.add('finalizado');
                     tarjeta.classList.remove('en-curso', 'pausa');
-                    badge.innerHTML = '<span class="badge-estado badge-finalizado">✅ FINALIZADO</span>';
+
+                    const inputLocalF = document.getElementById(id + '-local');
+                    const inputVisitaF = document.getElementById(id + '-visita');
+                    let badgePuntos = '';
+                    if (tieneResultado && inputLocalF && inputVisitaF && inputLocalF.value !== '' && inputVisitaF.value !== '') {
+                        const esElimF = tarjeta.getAttribute('data-es-eliminatoria') === 'true';
+                        const btnSelF = esElimF ? document.querySelector(`#clasificado-sel-${id} .btn-clasificado.seleccionado`) : null;
+                        const predClasifF = btnSelF ? btnSelF.getAttribute('data-equipo') : '';
+                        const clasifRealF = tarjeta.getAttribute('data-clasificado-real') || '';
+                        const equipoLocalF = tarjeta.getAttribute('data-local');
+                        const equipoVisitaF = tarjeta.getAttribute('data-visitante');
+                        const pts = calcularPuntosPartido(
+                            parseInt(inputLocalF.value), parseInt(inputVisitaF.value), predClasifF,
+                            parseInt(resLocal), parseInt(resVisita), clasifRealF,
+                            equipoLocalF, equipoVisitaF, esElimF
+                        );
+                        if (pts > 0) badgePuntos = ` <span style="color:#22c55e;font-weight:700;font-size:0.9rem;">+${pts}</span>`;
+                    }
+                    badge.innerHTML = `<span class="badge-estado badge-finalizado">✅ FINALIZADO</span>${badgePuntos}`;
                     if (tieneResultado) {
-                        const esElim = tarjeta.getAttribute('data-es-eliminatoria') === 'true';
-                        const clasificadoReal = tarjeta.getAttribute('data-clasificado-real');
-                        const clasificadoHtml = (esElim && clasificadoReal)
-                            ? `<div class="clasificado-real">Clasifica: <span>${clasificadoReal}</span></div>` : '';
+                        const esElim2 = tarjeta.getAttribute('data-es-eliminatoria') === 'true';
+                        const clasificadoReal2 = tarjeta.getAttribute('data-clasificado-real') || '';
+                        const clasificadoHtml = (esElim2 && clasificadoReal2)
+                            ? `<div class="clasificado-real">Clasifica: <span>${clasificadoReal2}</span></div>` : '';
 
                         resultadoDiv.innerHTML = `<div class="resultado-label">Resultado final</div><div class="marcador-real">${resLocal} <span>-</span> ${resVisita}</div>${clasificadoHtml}`;
                         resultadoDiv.style.display = 'block';
 
-                        const inputLocal = document.getElementById(id + '-local');
-                        const inputVisita = document.getElementById(id + '-visita');
                         const marcador = resultadoDiv.querySelector('.marcador-real');
-                        if (marcador && inputLocal && inputVisita && inputLocal.value !== '' && inputVisita.value !== '') {
-                            const predL = parseInt(inputLocal.value);
-                            const predV = parseInt(inputVisita.value);
-                            const resL = parseInt(resLocal);
-                            const resV = parseInt(resVisita);
-                            if (esElim) {
-                                const btnSel = document.querySelector(`#clasificado-sel-${id} .btn-clasificado.seleccionado`);
-                                const predClasif = btnSel ? btnSel.getAttribute('data-equipo') : '';
-                                const exacto = predL === resL && predV === resV;
-                                const predEmpate = predL === predV;
-                                const realEmpate = resL === resV;
-                                const empateOk = predEmpate && realEmpate;
-                                const tendenciaOk = !predEmpate && !realEmpate && Math.sign(predL - predV) === Math.sign(resL - resV);
-                                const clasificadoOk = predClasif === clasificadoReal;
-                                let clase;
-                                if (exacto && clasificadoOk) clase = 'exacto';
-                                else if (exacto || (empateOk && clasificadoOk) || (tendenciaOk && clasificadoOk)) clase = 'parcial';
-                                else if (empateOk || clasificadoOk) clase = 'parcial';
-                                else clase = 'erroneo';
-                                marcador.classList.remove('exacto', 'parcial', 'erroneo');
-                                marcador.classList.add(clase);
-                            } else {
-                                let clase;
-                                if (predL === parseInt(resLocal) && predV === parseInt(resVisita)) clase = 'exacto';
-                                else if (Math.sign(predL - predV) === Math.sign(parseInt(resLocal) - parseInt(resVisita))) clase = 'parcial';
-                                else clase = 'erroneo';
-                                marcador.classList.remove('exacto', 'parcial', 'erroneo');
-                                marcador.classList.add(clase);
-                            }
+                        if (marcador && inputLocalF && inputVisitaF && inputLocalF.value !== '' && inputVisitaF.value !== '') {
+                            const btnSel2 = esElim2 ? document.querySelector(`#clasificado-sel-${id} .btn-clasificado.seleccionado`) : null;
+                            const predClasif2 = btnSel2 ? btnSel2.getAttribute('data-equipo') : '';
+                            const pts2 = calcularPuntosPartido(
+                                parseInt(inputLocalF.value), parseInt(inputVisitaF.value), predClasif2,
+                                parseInt(resLocal), parseInt(resVisita), clasificadoReal2,
+                                tarjeta.getAttribute('data-local'), tarjeta.getAttribute('data-visitante'), esElim2
+                            );
+                            const clase = pts2 >= 4 ? 'exacto' : pts2 >= 1 ? 'parcial' : 'erroneo';
+                            marcador.classList.remove('exacto', 'parcial', 'erroneo');
+                            marcador.classList.add(clase);
                         }
                     }
                 } else {
@@ -550,9 +570,10 @@
                 if (golesLocal !== "" && golesVisita !== "") {
                     if (ahora >= fechaPartido) continue;
                     const esElim = tarjeta.getAttribute('data-es-eliminatoria') === 'true';
+                    const esEmpate = esElim && golesLocal === golesVisita;
                     const btnSel = esElim ? document.querySelector(`#clasificado-sel-${id} .btn-clasificado.seleccionado`) : null;
                     const clasificado = btnSel ? btnSel.getAttribute('data-equipo') : '';
-                    if (esElim && !clasificado) { alert(`Falta seleccionar quién clasifica en el partido ${id}.`); return; }
+                    if (esEmpate && !clasificado) { alert(`Falta seleccionar quién clasifica en el partido ${id}.`); return; }
                     resultados.push({ id_partido: id, golesLocal, golesVisitante: golesVisita, clasificado });
                 }
             }
