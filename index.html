@@ -147,7 +147,7 @@
 
     <script>
         // === ATENCIÓN: PEGÁ TU ÚLTIMA URL DE APPS SCRIPT ACÁ ===
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbzxPrpcez6puFaNWFRg06gyZbGR9PM_ufZLD6l_K-xMnLfyhwxt2lHmhNSsyWCxVj3OFg/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbwbnIzYiIbHRENEBVfsEEC77QIF0YPc1lcxUfX__dhxgR8yE3QHsRVb_X4Z-3UTyuI6yQ/exec';
         
         let usuarioActual = "";
         let pinActual = "";
@@ -423,17 +423,14 @@
             if (esElim) {
                 const exacto = predL === resL && predV === resV;
                 const predEmpate = predL === predV;
-                const realEmpate = resL === resV;
-                const empateOk = predEmpate && realEmpate;
-                const tendenciaOk = !predEmpate && !realEmpate && Math.sign(predL - predV) === Math.sign(resL - resV);
-                const predClasifEfectivo = predEmpate ? predClasif : (predL > predV ? equipoLocal : equipoVisita);
-                const realClasifEfectivo = realEmpate ? resClasif : (resL > resV ? equipoLocal : equipoVisita);
-                const clasificadoOk = !!(predClasifEfectivo && realClasifEfectivo && predClasifEfectivo === realClasifEfectivo);
+                const predGanador = predEmpate ? predClasif : (predL > predV ? equipoLocal : equipoVisita);
+                const clasificadoOk = !!(predGanador && resClasif && predGanador === resClasif);
+                const tendenciaOk = !predEmpate && resL !== resV && clasificadoOk && Math.sign(predL - predV) === Math.sign(resL - resV);
                 if (exacto && clasificadoOk) return 10;
                 if (exacto && !clasificadoOk) return 5;
-                if (empateOk && clasificadoOk) return 4;
-                if (empateOk && !clasificadoOk) return 1;
-                if (tendenciaOk && clasificadoOk) return 4;
+                if (predEmpate && clasificadoOk) return 4;
+                if (predEmpate && !clasificadoOk) return 1;
+                if (tendenciaOk) return 4;
                 if (clasificadoOk) return 2;
                 return 0;
             } else {
@@ -468,9 +465,10 @@
                     if (bV) bV.disabled = true;
                 }
 
-                // Estado por tiempo, marcador por API
+                // Estado: API como fuente principal, tiempo como fallback
                 let estado;
-                if (diffMin >= 115) estado = 'FINALIZADO';
+                if (estadoAPI === 'FINISHED') estado = 'FINALIZADO';
+                else if (diffMin >= 170) estado = 'FINALIZADO'; // fallback máximo (90+30ET+50pen)
                 else if (diffMin >= 0) estado = 'EN_CURSO';
                 else estado = 'PENDIENTE';
 
@@ -480,9 +478,14 @@
                     if (estado === 'PAUSA') tarjeta.classList.add('pausa');
 
                     let minDisplay;
-                    if (diffMin < 47) minDisplay = `${Math.min(Math.floor(diffMin), 45)}'`;
-                    else if (diffMin < 62) minDisplay = 'ET';
-                    else minDisplay = `${Math.min(Math.floor(diffMin - 62) + 45, 90)}'`;
+                    if (diffMin < 47)       minDisplay = `${Math.min(Math.floor(diffMin), 45)}'`;
+                    else if (diffMin < 62)  minDisplay = 'ET';
+                    else if (diffMin < 107) minDisplay = `${Math.min(Math.floor(diffMin - 62) + 45, 90)}'`;
+                    else if (diffMin < 122) minDisplay = 'ET';
+                    else if (diffMin < 137) minDisplay = `${Math.min(Math.floor(diffMin - 122) + 90, 105)}'`;
+                    else if (diffMin < 152) minDisplay = 'ET';
+                    else if (diffMin < 167) minDisplay = `${Math.min(Math.floor(diffMin - 152) + 105, 120)}'`;
+                    else                   minDisplay = 'Pen.';
                     badge.innerHTML = `<span class="badge-estado badge-en-curso">🔴 EN CURSO</span> <span style="color:#ef4444;font-weight:700;">${minDisplay}</span>`;
 
                     if (tieneResultado) {
