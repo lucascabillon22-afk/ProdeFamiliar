@@ -147,7 +147,7 @@
 
     <script>
         // === ATENCIÓN: PEGÁ TU ÚLTIMA URL DE APPS SCRIPT ACÁ ===
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbwbnIzYiIbHRENEBVfsEEC77QIF0YPc1lcxUfX__dhxgR8yE3QHsRVb_X4Z-3UTyuI6yQ/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbwNaeS2ZL7zr4B_OyZJJJjwvqm8LvekeKHOh-qBxSPrQ1IPCs9gok_tXpJzZm2HObIYFw/exec';
         
         let usuarioActual = "";
         let pinActual = "";
@@ -423,13 +423,15 @@
             if (esElim) {
                 const exacto = predL === resL && predV === resV;
                 const predEmpate = predL === predV;
+                const realEmpate = resL === resV;
                 const predGanador = predEmpate ? predClasif : (predL > predV ? equipoLocal : equipoVisita);
                 const clasificadoOk = !!(predGanador && resClasif && predGanador === resClasif);
-                const tendenciaOk = !predEmpate && resL !== resV && clasificadoOk && Math.sign(predL - predV) === Math.sign(resL - resV);
+                const tendenciaOk = !predEmpate && !realEmpate && clasificadoOk && Math.sign(predL - predV) === Math.sign(resL - resV);
                 if (exacto && clasificadoOk) return 10;
                 if (exacto && !clasificadoOk) return 5;
-                if (predEmpate && clasificadoOk) return 4;
-                if (predEmpate && !clasificadoOk) return 1;
+                if (predEmpate && realEmpate && clasificadoOk) return 4;
+                if (predEmpate && realEmpate && !clasificadoOk) return 1;
+                if (predEmpate && !realEmpate) return 0;
                 if (tendenciaOk) return 4;
                 if (clasificadoOk) return 2;
                 return 0;
