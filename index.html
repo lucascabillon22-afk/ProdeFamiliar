@@ -147,7 +147,7 @@
 
     <script>
         // === ATENCIÓN: PEGÁ TU ÚLTIMA URL DE APPS SCRIPT ACÁ ===
-        const scriptURL = 'https://script.google.com/macros/s/AKfycbwNaeS2ZL7zr4B_OyZJJJjwvqm8LvekeKHOh-qBxSPrQ1IPCs9gok_tXpJzZm2HObIYFw/exec';
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbxlV2O632CSQQIq8xb9BK8Xd1P6Z1lWIiSBCeMGauOc8PkLOulc_WMaA2Ag8dGq8t2WfA/exec';
         
         let usuarioActual = "";
         let pinActual = "";
@@ -431,7 +431,7 @@
                 if (exacto && !clasificadoOk) return 5;
                 if (predEmpate && realEmpate && clasificadoOk) return 4;
                 if (predEmpate && realEmpate && !clasificadoOk) return 1;
-                if (predEmpate && !realEmpate) return 0;
+                if (predEmpate && !realEmpate) return clasificadoOk ? 2 : 0;
                 if (tendenciaOk) return 4;
                 if (clasificadoOk) return 2;
                 return 0;
